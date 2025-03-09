@@ -113,6 +113,11 @@ if not main_data or 'torrents' not in main_data:
 
 欢迎提交 Issue 或 Pull Request 来改进本项目。
 
+## TODO LIST
+- 添加英文版本
+- ……
+
+
 ## 许可证
 
 <p>
