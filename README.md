@@ -115,6 +115,10 @@ if not main_data or 'torrents' not in main_data:
 
 ## TODO LIST
 - 添加英文版本
+- 从环境变量和config.json获取配置
+- 打包成二进制文件
+- 添加GUI（？也许）
+- 以服务加载
 - ……
 
 
