@@ -1,0 +1,169 @@
+from urllib import parse, request
+from urllib.parse import unquote, quote
+import json
+import time
+from base64 import b64encode
+
+# 配置信息
+WEB_URL = "http://127.0.0.1:12345/"  # 修改你的端口号，url必须以斜杠结尾
+USERNAME = "" # 此处填写用户名（如有）
+PASSWORD = "" # 此处填写密码（如有）切勿在公共设备上存储明文密码
+
+# API端点（严格小写）
+SYNC_MAINDATA = "api/v2/sync/maindata"
+SYNC_TORRENT_PEERS = "api/v2/sync/torrentPeers?hash="
+TRANSFER_BANPEERS = "api/v2/transfer/banPeers"
+
+# 认证处理
+def create_auth_header():
+    credential = b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode("utf-8")
+    return {"Authorization": f"Basic {credential}"}
+
+headers = create_auth_header()
+
+def check_api_version():
+    try:
+        req = request.Request(
+            url=WEB_URL + "api/v2/app/webapiVersion",
+            headers=headers
+        )
+        with request.urlopen(req) as res:
+            print(f"[系统信息] qBittorrent WebAPI 版本: {res.read().decode()}")
+    except Exception as e:
+        print(f"[严重错误] API检测失败: {str(e)}")
+        print("可能原因：")
+        print("1. WebUI地址错误 → 当前值:", WEB_URL)
+        print("2. 认证失败 → 用户:", USERNAME)
+        print("3. qBittorrent版本过低（需 ≥ v4.1.0）")
+        exit(1)
+
+def fetch_data(api_endpoint):
+    try:
+        req = request.Request(
+            url=WEB_URL + api_endpoint,
+            headers=headers
+        )
+        with request.urlopen(req, timeout=10) as res:
+            return json.loads(res.read().decode())
+    except Exception as e:
+        print(f"请求错误: {str(e)}")
+        return None
+
+def convert_peers_format(peer_info):
+    # 分割哈希和peers部分
+    hash_part, peers_part = peer_info.split('&', 1)
+    
+    # 处理peers参数
+    encoded_peers = peers_part.split('=', 1)[1]
+    decoded_peers = unquote(encoded_peers).strip('"')
+    ip, port = decoded_peers.rsplit(':', 1)
+    
+    # 重构并编码
+    formatted = f'[{ip}]:{port}'
+    new_peers = quote(formatted, safe='')
+    
+    return f'{hash_part}&peers={new_peers}'
+
+def ban_peer(peer_info):
+    try:
+        
+        # 分割IP:Port（兼容IPv6）
+        if peer_info.count(':') > 1:  # IPv6地址
+            ip, port = peer_info.rsplit(':', 1)
+            formatted_peer = f"[{ip}]:{port}"
+        else:  # IPv4地址
+            formatted_peer = peer_info
+        
+       
+        # 构建POST数据
+        post_data = "hash=" + torrent_hash +"&peers=" + quote(formatted_peer)
+        
+       
+        # 发送请求
+        req = request.Request(
+            url=WEB_URL + TRANSFER_BANPEERS, 
+            data=post_data.encode('utf-8'),
+            method='POST',
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+       
+        
+        with request.urlopen(req, timeout=5) as res:
+            if res.status == 200:
+                return True
+            print(f"禁止失败，HTTP状态码: {res.status}")
+            return False
+            
+    except Exception as e:
+        print(f"处理异常: {str(e)}")
+        return False
+# 初始化检查
+check_api_version()
+
+while True:
+    start_time = time.time()
+    print("\n" + "="*40)
+    print(f"开始扫描 ({time.asctime()})")
+    
+    main_data = fetch_data(SYNC_MAINDATA)
+    if not main_data or 'torrents' not in main_data:
+        print("无活跃种子，跳过扫描")
+        time.sleep(20)
+        continue
+
+    for torrent_hash in main_data['torrents']:
+        peers_data = fetch_data(SYNC_TORRENT_PEERS + torrent_hash)
+        if not peers_data or 'peers' not in peers_data:
+            continue
+
+        torrent_name = main_data['torrents'][torrent_hash].get('name', '未知种子')
+        print(f"\n扫描种子: {torrent_name}")
+
+        for peer_id, peer_info in peers_data['peers'].items():
+            score = 0
+            client = peer_info.get('client', '').lower()
+            ip = peer_info.get('ip', '未知IP')
+            port = peer_info.get('port', 0)
+
+            # 客户端检测（支持多种迅雷变体）
+            thunder_clients = ['xl', 'xunlei', 'thunder']
+            if any(c in client for c in thunder_clients):
+                print(f"检测到迅雷客户端: {peer_info.get('client') or '未知客户端'}")
+                score += 2
+
+            # 端口检测
+            suspicious_ports = {
+                15000: 2,   # 默认高风险端口
+                12345: 1,
+                2011: 1,
+                2013: 1,
+                54321: 1
+            }
+            score += suspicious_ports.get(port, 0)
+
+            # 上传行为检测
+            if peer_info.get('progress', 1) == 0 and peer_info.get('uploaded', 0) > 1024 * 1024 * 16:
+                score += 1
+            if peer_info.get('progress', 1) == 0 and peer_info.get('uploaded', 0) > 1024 * 1024 * 64:
+                score += 2
+
+            # 执行禁止
+            if score >= 2:
+                peer_str = f"{ip}:{port}"
+                if ban_peer(peer_str):
+                    print(f"[已禁止] {peer_str} | 客户端: {peer_info.get('client') or '未知'}")
+                else:
+                    print(f"[禁止失败] {peer_str}")
+            elif score > 0:
+                print(f"[可疑] {ip}:{port} | 客户端: {peer_info.get('client') or '未知'}")
+
+    # 计算实际间隔时间
+    elapsed = time.time() - start_time
+    sleep_time = max(20 - elapsed, 1)
+    while sleep_time > 0:
+        print(f"\r本轮扫描完成，下次扫描将在{sleep_time:1.0f}秒后开始", end="", flush=True) 
+        time.sleep(1)
+        sleep_time -= 1
+        if sleep_time < 0:  # 防止 sleep_time 变成负数
+            sleep_time = 0
+    time.sleep(sleep_time)
