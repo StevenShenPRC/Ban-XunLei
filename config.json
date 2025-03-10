@@ -1,0 +1,11 @@
+{
+    "webui" : {
+        "url"       :   "" ,
+        "username"  :   "",
+        "passwd"    :   ""
+    }
+    ,
+    "config" : {
+
+    } 
+}

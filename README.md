@@ -26,14 +26,54 @@
 
 在使用之前，请确保正确配置以下信息：
 
-1. **WEB_URL**：qBittorrent WebUI 的地址，默认为 `http://127.0.0.1:12345/`，请根据实际情况修改。
-2. **USERNAME** 和 **PASSWORD**：如果 qBittorrent WebUI 启用了认证，请填写用户名和密码。切勿在公共设备上存储明文密码。建议本地部署时勾选 **对本地主机上的客户端跳过身份验证** 选项。
+1. **WEB_URL**：qBittorrent WebUI 的地址，默认为 `http://127.0.0.1:8080/`，请根据实际情况修改。
+2. <del> **USERNAME** 和 **PASSWORD**：如果 qBittorrent WebUI 启用了认证，请填写用户名和密码。切勿在公共设备上存储明文密码。</del> <br>由于目前发现无法通过WEBUI的认证机制，建议本地部署时在qBittorrent WebUI 设置中勾选 **对本地主机上的客户端跳过身份验证** 选项。 
 
-```python
-WEB_URL = "http://127.0.0.1:1432/"  # 修改你的端口号，url必须以斜杠结尾
-USERNAME = "" # 此处填写用户名（如有）
-PASSWORD = "" # 此处填写密码（如有）切勿在公共设备上存储明文密码
+有以下两种配置方法：
+### 1. 环境变量
+   
+   #### 临时配置：
+   
+   ##### Linux (bash)
+   ```bash
+    export QBT_URL=""       
+    # 在引号之间填入WEBUI的URL，务必以“/”结尾。如："http://127.0.0.1:8080/"
+    export QBT_USERNAME="" 
+    # 在引号之间填入用户名
+    export QBT_PASSWD=""    
+    # 在引号之间填入密码
+   ```
+   ##### 或对于Windows (Powershell)
+   ```pwsh
+   $env:QBT_URL=""
+    # 在引号之间填入WEBUI的URL，务必以“/”结尾。如："http://127.0.0.1:8080/"
+   $env:QBT_USERNAME=""
+    # 在引号之间填入用户名 
+   $env:QBT_PASSWD=""
+    # 在引号之间填入密码
+   ```
+   #### 长期配置
+   ##### Linux
+### 2. 配置文件
+配置文件名为`config.json`，在`babxunlei.py`的同一目录下即可。
+```json
+{
+    "webui" : {
+        "url"       :   "" ,  
+        // 在引号之间填入WEBUI的URL，务必以“/”结尾。如："http://127.0.0.1:8080/"
+        "username"  :   "",
+        // 在引号之间填入用户名 
+        "passwd"    :   ""
+        // 在引号之间填入密码
+    }
+    ,
+    "config" : {
+        // 留待后续使用
+    } 
+}
 ```
+
+**<big>优先级按照 `环境变量`>`config.json`>`默认值` 排列。修改配置文件后请检查环境变量是否有冲突配置。**
 
 ## 使用方法
 
@@ -114,11 +154,11 @@ if not main_data or 'torrents' not in main_data:
 欢迎提交 Issue 或 Pull Request 来改进本项目。
 
 ## TODO LIST
-- 添加英文版本
-- 从环境变量和config.json获取配置
-- 打包成二进制文件
-- 添加GUI（？也许）
-- 以服务加载
+- [x] 从环境变量和config.json获取配置
+- [ ] 添加英文版本
+- [ ] 打包成二进制文件
+- [ ] 添加GUI（？也许）
+- [ ] 以服务加载
 - ……
 
 

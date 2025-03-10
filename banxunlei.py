@@ -1,13 +1,9 @@
 from urllib import parse, request
 from urllib.parse import unquote, quote
+import os
 import json
 import time
 from base64 import b64encode
-
-# 配置信息
-WEB_URL = "http://127.0.0.1:12345/"  # 修改你的端口号，url必须以斜杠结尾
-USERNAME = "" # 此处填写用户名（如有）
-PASSWORD = "" # 此处填写密码（如有）切勿在公共设备上存储明文密码
 
 # API端点（严格小写）
 SYNC_MAINDATA = "api/v2/sync/maindata"
@@ -20,6 +16,58 @@ def create_auth_header():
     return {"Authorization": f"Basic {credential}"}
 
 headers = create_auth_header()
+
+# 获取配置信息
+def get_config_value(env_var_name, config_key, default_value):
+    """
+    获取配置值，优先级：环境变量 > 配置文件 > 默认值
+    :param env_var_name: 环境变量名称
+    :param config_key: 配置文件中的键（例如 'database.url'）
+    :param default_value: 默认值
+    :return: 配置值
+    """
+    # 1. 尝试从环境变量获取
+    value = os.getenv(env_var_name)
+    if value is not None:
+        return value
+
+    # 2. 尝试从配置文件获取
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        
+        # 支持嵌套键（例如 'database.url'）
+        keys = config_key.split('.')
+        current = config
+        for key in keys:
+            current = current.get(key)
+            if current is None:
+                break
+        
+        if current is not None:
+            return current
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        pass  # 配置文件不存在或格式错误，忽略
+
+    # 3. 使用默认值
+    return default_value
+
+# 配置信息
+WEB_URL = get_config_value(
+    env_var_name='QBT_URL',
+    config_key='webui.url',
+    default_value='http://127.0.0.1:8080/'
+)       # 获取WEBUI的url
+USERNAME =get_config_value(
+    env_var_name='QBT_USERNAME',
+    config_key='webui.username',
+    default_value=''
+) # 此处获取用户名（如有，默认为空）
+PASSWORD = get_config_value(
+    env_var_name='QBT_PASSWD',
+    config_key='webui.passwd',
+    default_value=''
+) # 此处填写密码（如有，默认为空）请配置环境变量或写入config.json, 切勿在公共设备上明文存储密码。
 
 def check_api_version():
     try:
