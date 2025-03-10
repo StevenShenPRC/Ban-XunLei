@@ -67,7 +67,12 @@ PASSWORD = get_config_value(
     env_var_name='QBT_PASSWD',
     config_key='webui.passwd',
     default_value=''
-) # 此处填写密码（如有，默认为空）请配置环境变量或写入config.json, 切勿在公共设备上明文存储密码。
+) # 此处获取密码（如有，默认为空）请配置环境变量或写入config.json, 切勿在公共设备上明文存储密码。
+SLEEPTIME = get_config_value(
+    env_var_name='BANXL_SLEEPTIME',
+    config_key='config.sleeptime',
+    default_value='20'
+) # 此处获取循环间隔时间
 
 def check_api_version():
     try:
@@ -156,7 +161,7 @@ while True:
     main_data = fetch_data(SYNC_MAINDATA)
     if not main_data or 'torrents' not in main_data:
         print("无活跃种子，跳过扫描")
-        time.sleep(20)
+        time.sleep(SLEEPTIME)
         continue
 
     for torrent_hash in main_data['torrents']:
@@ -207,7 +212,7 @@ while True:
 
     # 计算实际间隔时间
     elapsed = time.time() - start_time
-    sleep_time = max(20 - elapsed, 1)
+    sleep_time = max(SLEEPTIME - elapsed, 1)
     while sleep_time > 0:
         print(f"\r本轮扫描完成，下次扫描将在{sleep_time:1.0f}秒后开始", end="", flush=True) 
         time.sleep(1)
