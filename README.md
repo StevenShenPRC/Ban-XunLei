@@ -145,8 +145,8 @@ python banxunlei.py
 - **自定义风险评分** 在源码中修改与 `score` 相关的数值即可。
 - **自定义扫描时间** 修改环境变量`'BANXL_SLEEPTIME'`或者修改`config.json`中的`config.tolerate_upspeed`。
 - **自定义可疑客户端下载速度封禁阈值** 
-  - 可容忍的可疑客户端速度`tolerare_upspeed`：修改环境变量`'QBT_OKUPSPEED'`或者修改`config.json`中的`config.tolerate_upspeed`。默认值为1024 * 1024 * 1 = 1 MBps，风险评分减1。
-  - 安全的可疑客户端速度`safe_upspeed`：修改环境变量`'QBT_SAFEUPSPEED'`或者修改`config.json`中的`config.safe_upspeed`。默认值为1024 * 1024 * 0.1 = 0.1 MBps，风险评分减2。
+  - 可容忍的可疑客户端速度`tolerare_upspeed`：修改环境变量`'QBT_OKUPSPEED'`或者修改`config.json`中的`config.tolerate_upspeed`。单位是MBps，默认值为1 MBps，风险评分减1。
+  - 安全的可疑客户端速度`safe_upspeed`：修改环境变量`'QBT_SAFEUPSPEED'`或者修改`config.json`中的`config.safe_upspeed`。单位是KBps，默认值为100KBps，风险评分减2。
 
 ## 示例输出
 
