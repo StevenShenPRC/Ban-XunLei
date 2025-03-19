@@ -11,11 +11,12 @@ SYNC_TORRENT_PEERS = "api/v2/sync/torrentPeers?hash="
 TRANSFER_BANPEERS = "api/v2/transfer/banPeers"
 
 # 认证处理
-def create_auth_header():
-    credential = b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode("utf-8")
-    return {"Authorization": f"Basic {credential}"}
+# 目前暂未解决
+# def create_auth_header():
+#     credential = b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode("utf-8")
+#     return {"Authorization": f"Basic {credential}"}
 
-headers = create_auth_header()
+# headers = create_auth_header()
 
 # 获取配置信息
 def get_config_value(env_var_name, config_key, default_value):
@@ -28,8 +29,20 @@ def get_config_value(env_var_name, config_key, default_value):
     """
     # 1. 尝试从环境变量获取
     value = os.getenv(env_var_name)
-    if value is not None:
-        return value
+    if value:
+        # 根据 default_value 的类型进行类型转换
+        if isinstance(default_value, bool):
+            # 处理布尔类型
+            return value.lower() in ('true', '1', 't', 'y', 'yes')
+        elif isinstance(default_value, int):
+            return int(value)
+        elif isinstance(default_value, float):
+            return float(value)
+        elif isinstance(default_value, str):
+            return value
+        else:
+            # 如果 default_value 是其他类型，直接返回字符串
+            return value
 
     # 2. 尝试从配置文件获取
     try:
@@ -44,8 +57,24 @@ def get_config_value(env_var_name, config_key, default_value):
             if current is None:
                 break
         
-        if current is not None:
-            return current
+        if current:
+            # 根据 default_value 的类型进行类型转换
+            if isinstance(default_value, bool):
+                # 处理布尔类型
+                if isinstance(current, str):
+                    return current.lower() in ('true', '1', 't', 'y', 'yes')
+                else:
+                    return bool(current)
+            elif isinstance(default_value, int):
+                return int(current)
+            elif isinstance(default_value, float):
+                return float(current)
+            elif isinstance(default_value, str):
+                return str(current)
+            else:
+                # 如果 default_value 是其他类型，直接返回 current
+                return current
+            
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         pass  # 配置文件不存在或格式错误，忽略
 
@@ -71,14 +100,15 @@ PASSWORD = get_config_value(
 SLEEPTIME = get_config_value(
     env_var_name='BANXL_SLEEPTIME',
     config_key='config.sleeptime',
-    default_value='20'
+    default_value= 20
 ) # 此处获取循环间隔时间
 
 def check_api_version():
     try:
         req = request.Request(
             url=WEB_URL + "api/v2/app/webapiVersion",
-            headers=headers
+            # headers=headers
+            # auth问题暂未解决
         )
         with request.urlopen(req) as res:
             print(f"[系统信息] qBittorrent WebAPI 版本: {res.read().decode()}")
@@ -94,7 +124,8 @@ def fetch_data(api_endpoint):
     try:
         req = request.Request(
             url=WEB_URL + api_endpoint,
-            headers=headers
+            # headers=headers
+            # auth问题暂未解决
         )
         with request.urlopen(req, timeout=10) as res:
             return json.loads(res.read().decode())
@@ -186,6 +217,7 @@ while True:
 
             # 禁止其他配置的客户端
             leech_clients = get_config_value(
+                env_var_name = '',
                 config_key = 'leech_clients', 
                 default_value = []
                 )
@@ -210,20 +242,23 @@ while True:
                 score += 2
 
             #上传速度检测
+            MB = 1024 * 1024
+            KB = 1024
             tolerate_upspeed = get_config_value(
                 env_var_name = 'QBT_OKUPSPEED',
                 config_key = 'config.tolerate_upspeed',
-                default_value= 1024 * 1024 * 1
+                default_value= int(1 * MB)
             )
             safe_upspeed = get_config_value(
                 env_var_name = 'QBT_SAFEUPSPEED',
                 config_key = 'config.safe_upspeed',
-                default_value= 1024 * 1024 * 0.1
+                default_value= int(100 * KB)
             )
-            if peer_info.get('up_speed', 1) < 1024 * 1024 * tolerate_upspeed:
-                score -= 1
-            if peer_info.get('up_speed', 1) < 1024 * 1024 * tolerate_upspeed:
+            peer_upspeed = peer_info.get('up_speed', 0)
+            if peer_upspeed < int(safe_upspeed):
                 score -= 2
+            elif peer_upspeed < int(tolerate_upspeed):
+                score -= 1
 
             # 执行禁止
             if score >= 2:
