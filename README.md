@@ -54,26 +54,40 @@
    ```
    #### 长期配置
    ##### Linux
+--- 
+TBW
+
 ### 2. 配置文件
 配置文件名为`config.json`，在`babxunlei.py`的同一目录下即可。
 ```json
 {
     "webui" : {
-        "url"       :   "" ,  
-        // 在引号之间填入WEBUI的URL，务必以“/”结尾。如："http://127.0.0.1:8080/"
+        "url"       :   "" , 
+        //  在引号之间填入WEBUI的URL，务必以“/”结尾。如："http://127.0.0.1:8080/"
         "username"  :   "",
-        // 在引号之间填入用户名 
+        //  在引号之间填入用户名 
         "passwd"    :   ""
-        // 在引号之间填入密码
+        //  在引号之间填入密码
     }
     ,
     "config" : {
-        // 留待后续使用
+        "sleeptime" :   "",
+        "tolerate_upspeed"  :   "",
+        "safe_upspeed"  :    ""
     } 
+    ,
+    
+     "leech_clients":  [
+        // 已内置部分报道的吸血客户端，默认风险分+3
+     ]
+    }
+    
 }
 ```
 
 **<big>优先级按照 `环境变量`>`config.json`>`默认值` 排列。修改配置文件后请检查环境变量是否有冲突配置。**
+
+以上两种方法如无其他说明也可适用于其他自定义配置。
 
 ## 使用方法
 
@@ -115,28 +129,25 @@ python banxunlei.py
 ## 自定义用法
 
 - **自定义高风险端口**：可按需修改 `suspicious_ports` 中的端口及其对应的风险分数。
-- **自定义客户端** 可根据源码按需修改添加。
-- **自定义分数** 在源码中修改与 `score` 相关的数值即可。
-- **自定义扫描时间** 修改下面两段代码中的sleep时间即可。
-```python
-if not main_data or 'torrents' not in main_data:
-        print("无活跃种子，跳过扫描")
-        time.sleep(20)   #修改这里的20
-        continue
+- **自定义客户端** 修改`config.json`中的`leech_clients`数组即可。以下为内置的客户端：
+```json
+"leech_clients":  [
+        "dt/torrent",
+        "Taipei-Torrent",
+        "taipei-torrent",
+        "BitComet 2.04",
+        "hp/torrent",
+        "github.com/anacrolix/torrent",
+        "Transaction 2.94",
+        "TrafficConsume"
+     ]
 ```
-```python
- # 计算实际间隔时间
-    elapsed = time.time() - start_time
-    sleep_time = max(20 - elapsed, 1)   #修改这里的20
-    while sleep_time > 0:
-        print(f"\r本轮扫描完成，下次扫描将在{sleep_time:1.0f}秒后开始", end="", flush=True) 
-        time.sleep(1)
-        sleep_time -= 1
-        if sleep_time < 0:  # 防止 sleep_time 变成负数
-            sleep_time = 0
-    time.sleep(sleep_time)
-```
-   
+- **自定义风险评分** 在源码中修改与 `score` 相关的数值即可。
+- **自定义扫描时间** 修改环境变量`'BANXL_SLEEPTIME'`或者修改`config.json`中的`config.tolerate_upspeed`。
+- **自定义可疑客户端下载速度封禁阈值** 
+  - 可容忍的可疑客户端速度`tolerare_upspeed`：修改环境变量`'QBT_OKUPSPEED'`或者修改`config.json`中的`config.tolerate_upspeed`。默认值为1024 * 1024 * 1 = 1 MBps，风险评分减1。
+  - 安全的可疑客户端速度`safe_upspeed`：修改环境变量`'QBT_SAFEUPSPEED'`或者修改`config.json`中的`config.safe_upspeed`。默认值为1024 * 1024 * 0.1 = 0.1 MBps，风险评分减2。
+
 ## 示例输出
 
 ```
@@ -155,6 +166,7 @@ if not main_data or 'torrents' not in main_data:
 
 ## TODO LIST
 - [x] 从环境变量和config.json获取配置
+- [ ] 通过WEBUI的登录验证
 - [ ] 添加英文版本
 - [ ] 打包成二进制文件
 - [ ] 添加GUI（？也许）

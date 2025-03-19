@@ -6,6 +6,22 @@
     }
     ,
     "config" : {
-        "sleeptime" :   ""
+        "sleeptime" :   "",
+        "tolerate_upspeed"  :   "",
+        "safe_upspeed"  :    ""
     } 
+    ,
+    
+     "leech_clients":  [
+        "dt/torrent",
+        "Taipei-Torrent",
+        "taipei-torrent",
+        "BitComet 2.04",
+        "hp/torrent",
+        "github.com/anacrolix/torrent",
+        "Transaction 2.94",
+        "TrafficConsume"
+     ]
+    }
+    
 }

@@ -184,7 +184,16 @@ while True:
                 print(f"检测到迅雷客户端: {peer_info.get('client') or '未知客户端'}")
                 score += 2
 
-            # 端口检测
+            # 禁止其他配置的客户端
+            leech_clients = get_config_value(
+                config_key = 'leech_clients', 
+                default_value = []
+                )
+            if any(c in client for c in leech_clients):
+                print(f"检测到报道的吸血客户端: {peer_info.get('client') or '未知客户端'}")
+                score += 3
+
+            # 端口检测        
             suspicious_ports = {
                 15000: 2,   # 默认高风险端口
                 12345: 1,
@@ -194,11 +203,27 @@ while True:
             }
             score += suspicious_ports.get(port, 0)
 
-            # 上传行为检测
+            # 上传行为检测 
             if peer_info.get('progress', 1) == 0 and peer_info.get('uploaded', 0) > 1024 * 1024 * 16:
                 score += 1
             if peer_info.get('progress', 1) == 0 and peer_info.get('uploaded', 0) > 1024 * 1024 * 64:
                 score += 2
+
+            #上传速度检测
+            tolerate_upspeed = get_config_value(
+                env_var_name = 'QBT_OKUPSPEED',
+                config_key = 'config.tolerate_upspeed',
+                default_value= 1024 * 1024 * 1
+            )
+            safe_upspeed = get_config_value(
+                env_var_name = 'QBT_SAFEUPSPEED',
+                config_key = 'config.safe_upspeed',
+                default_value= 1024 * 1024 * 0.1
+            )
+            if peer_info.get('up_speed', 1) < 1024 * 1024 * tolerate_upspeed:
+                score -= 1
+            if peer_info.get('up_speed', 1) < 1024 * 1024 * tolerate_upspeed:
+                score -= 2
 
             # 执行禁止
             if score >= 2:
